@@ -10,8 +10,19 @@ const T_SPIKE := Vector2i(5, 0)
 const T_WATER := Vector2i(6, 0)
 const T_FLOWER := Vector2i(7, 0)
 
+const PLAYER_SCENE := preload("res://scenes/characters/Player.tscn")
+const BEETLE_SCENE := preload("res://scenes/enemies/Beetle.tscn")
+const WORM_SCENE := preload("res://scenes/enemies/Worm.tscn")
+const CROW_SCENE := preload("res://scenes/enemies/Crow.tscn")
+const MUSHROOM_SCENE := preload("res://scenes/enemies/MushroomBeetle.tscn")
+const BOSS_SCENE := preload("res://scenes/enemies/PestKing.tscn")
+const CHECKPOINT_SCENE := preload("res://scenes/objects/Checkpoint.tscn")
+const MOVING_PLATFORM_SCENE := preload("res://scenes/objects/MovingPlatform.tscn")
+const SHOP_SCENE := preload("res://scenes/objects/CropShop.tscn")
+const GATE_SCENE := preload("res://scenes/objects/Gate.tscn")
+
 var player: Player
-var tile_map: TileMap
+var tile_map: Node
 var score := 0
 var crops := 0
 var coins := 0
@@ -31,9 +42,6 @@ var game_finished := false
 
 func _ready() -> void:
 	_ensure_input_actions()
-	_build_background()
-	_build_tilemap()
-	_build_level()
 	_spawn_player()
 	_spawn_checkpoints()
 	_spawn_moving_platforms()
@@ -229,7 +237,7 @@ func _add_spike_tile(tile_x: int, tile_y: int) -> void:
 func _add_tile_collisions() -> void:
 	var solid_tiles := [T_GRASS, T_DIRT, T_WOOD, T_FENCE, T_MUD]
 	for cell in tile_map.get_used_cells(0):
-		var atlas_coords := tile_map.get_cell_atlas_coords(0, cell)
+		var atlas_coords: Vector2i = tile_map.get_cell_atlas_coords(0, cell)
 		if atlas_coords in solid_tiles:
 			_add_solid_tile(cell)
 
@@ -251,11 +259,14 @@ func _add_hazard(pos: Vector2, size: Vector2, color: Color, damage: int) -> void
 	add_child(hazard)
 
 func _spawn_player() -> void:
-	player = Player.new()
-	player.position = spawn_point
+	player = get_node_or_null("player") as Player
+	if not player:
+		player = PLAYER_SCENE.instantiate()
+		player.name = "player"
+		player.position = spawn_point
+		add_child(player)
 	player.health_changed.connect(_on_player_health_changed)
 	player.died.connect(_on_player_died)
-	add_child(player)
 	var camera := Camera2D.new()
 	camera.position_smoothing_enabled = true
 	camera.limit_left = -64
@@ -268,7 +279,7 @@ func _spawn_player() -> void:
 
 func _spawn_checkpoints() -> void:
 	for pos in [Vector2(720, 710), Vector2(1660, 640), Vector2(2540, 450)]:
-		var checkpoint := Checkpoint.new()
+		var checkpoint: Checkpoint = CHECKPOINT_SCENE.instantiate()
 		checkpoint.position = pos
 		checkpoint.activated.connect(_on_checkpoint_activated)
 		add_child(checkpoint)
@@ -279,14 +290,14 @@ func _spawn_moving_platforms() -> void:
 	_add_moving_platform(Vector2(2110, 500), Vector2(180, -70), 2.2)
 
 func _add_moving_platform(pos: Vector2, offset: Vector2, travel: float) -> void:
-	var platform := MovingPlatform.new()
+	var platform: MovingPlatform = MOVING_PLATFORM_SCENE.instantiate()
 	platform.position = pos
 	platform.move_offset = offset
 	platform.travel_time = travel
 	add_child(platform)
 
 func _spawn_shop() -> void:
-	var shop := CropShop.new()
+	var shop: CropShop = SHOP_SCENE.instantiate()
 	shop.position = Vector2(1710, 465)
 	shop.heal_requested.connect(_on_shop_heal_requested)
 	add_child(shop)
@@ -316,14 +327,24 @@ func _spawn_enemies() -> void:
 	_add_enemy("boss", Vector2(3060, 420))
 
 func _add_enemy(kind: String, pos: Vector2) -> void:
-	var enemy := FarmEnemy.new()
+	var packed_scene: PackedScene = BEETLE_SCENE
+	match kind:
+		"worm":
+			packed_scene = WORM_SCENE
+		"crow":
+			packed_scene = CROW_SCENE
+		"mushroom":
+			packed_scene = MUSHROOM_SCENE
+		"boss":
+			packed_scene = BOSS_SCENE
+	var enemy: FarmEnemy = packed_scene.instantiate()
 	enemy.configure(kind, player)
 	enemy.position = pos
 	enemy.defeated.connect(_on_enemy_defeated.bind(kind))
 	add_child(enemy)
 
 func _spawn_gate() -> void:
-	gate = Gate.new()
+	gate = GATE_SCENE.instantiate()
 	gate.position = Vector2(3370, 420)
 	gate.reached_gate.connect(_on_gate_reached)
 	add_child(gate)
