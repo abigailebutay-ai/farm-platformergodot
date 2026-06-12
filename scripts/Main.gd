@@ -24,8 +24,8 @@ var ui_key: Label
 var ui_timer: Label
 var player_health_bar: ColorRect
 var message: Label
-var spawn_point := Vector2(96, 480)
-var checkpoint_position := Vector2(96, 480)
+var spawn_point := Vector2(96, 350)
+var checkpoint_position := Vector2(96, 350)
 var elapsed_time := 0.0
 var game_finished := false
 
@@ -77,61 +77,25 @@ func _add_mouse_action(action: String, button: int) -> void:
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("restart"):
 		get_tree().reload_current_scene()
-	if player and not player.dead and player.global_position.y > 820:
+	if player and not player.dead and player.global_position.y > 900:
 		player.fall_out()
 	if not game_finished:
 		elapsed_time += delta
 	_update_timer_ui()
 
 func _build_background() -> void:
-	var sky := ColorRect.new()
-	sky.color = Color("#95d8ff")
-	sky.size = Vector2(4096, 900)
-	sky.position = Vector2(-256, -420)
-	add_child(sky)
-	for i in range(9):
-		var cloud := ColorRect.new()
-		cloud.color = Color(1, 1, 1, 0.65)
-		cloud.position = Vector2(130 + i * 360, -260 + (i % 3) * 34)
-		cloud.size = Vector2(110, 22)
-		add_child(cloud)
-	for i in range(7):
-		var hill := Polygon2D.new()
-		hill.color = Color("#79c66a")
-		var x := -180 + i * 620
-		hill.polygon = PackedVector2Array([Vector2(x, 462), Vector2(x + 310, 290 - (i % 2) * 30), Vector2(x + 680, 462)])
-		add_child(hill)
-	for i in range(9):
-		_add_background_barn(Vector2(260 + i * 430, 408), i % 2 == 0)
-	for i in range(20):
-		var row := ColorRect.new()
-		row.color = Color("#4f9a3f")
-		row.position = Vector2(-150 + i * 190, 438)
-		row.size = Vector2(100, 8)
-		add_child(row)
-
-func _add_background_barn(pos: Vector2, windmill: bool) -> void:
-	var barn := ColorRect.new()
-	barn.position = pos
-	barn.size = Vector2(88, 54)
-	barn.color = Color("#b84a3d")
-	add_child(barn)
-	var roof := Polygon2D.new()
-	roof.color = Color("#7a362a")
-	roof.polygon = PackedVector2Array([pos + Vector2(-8, 0), pos + Vector2(44, -34), pos + Vector2(96, 0)])
-	add_child(roof)
-	if windmill:
-		var pole := ColorRect.new()
-		pole.position = pos + Vector2(116, -34)
-		pole.size = Vector2(8, 88)
-		pole.color = Color("#8d6a45")
-		add_child(pole)
-		for blade in [Vector2(0, -22), Vector2(22, 0), Vector2(0, 22), Vector2(-22, 0)]:
-			var arm := ColorRect.new()
-			arm.position = pos + Vector2(120, 6)
-			arm.size = Vector2(abs(blade.x) + 6, abs(blade.y) + 6)
-			arm.color = Color("#f0dfb5")
-			add_child(arm)
+	var texture: Texture2D = load("res://assets/backgrounds/farm_background.png")
+	var background := Node2D.new()
+	background.z_index = -100
+	add_child(background)
+	var target_size := Vector2(1280, 720)
+	var image_size := texture.get_size()
+	for i in range(4):
+		var sprite := Sprite2D.new()
+		sprite.texture = texture
+		sprite.position = Vector2(640 + i * 1280, 360)
+		sprite.scale = Vector2(target_size.x / image_size.x, target_size.y / image_size.y)
+		background.add_child(sprite)
 
 func _build_tilemap() -> void:
 	tile_map = TileMap.new()
@@ -168,6 +132,23 @@ func _paint_tile(img: Image, tile_x: int, top: Color, bottom: Color) -> void:
 		for x in range(TILE):
 			var t := float(y) / float(TILE - 1)
 			img.set_pixel(ox + x, y, top.lerp(bottom, t))
+	if tile_x == 0:
+		for x in range(TILE):
+			img.set_pixel(ox + x, 0, Color("#b5df55"))
+			img.set_pixel(ox + x, 1, Color("#77bd35"))
+		for x in range(3, TILE, 7):
+			img.set_pixel(ox + x, 3, Color("#d5ec77"))
+	if tile_x == 1:
+		for p in [Vector2i(5, 8), Vector2i(18, 5), Vector2i(27, 14), Vector2i(10, 24), Vector2i(23, 27)]:
+			img.set_pixel(ox + p.x, p.y, Color("#c28a55"))
+			if p.x + 1 < TILE:
+				img.set_pixel(ox + p.x + 1, p.y, Color("#5e3826"))
+	if tile_x == 2:
+		for y in [7, 15, 23]:
+			for x in range(TILE):
+				img.set_pixel(ox + x, y, Color("#6d432b"))
+		for x in [4, 18, 29]:
+			img.set_pixel(ox + x, 5, Color("#e1ad6d"))
 	if tile_x == 3:
 		for x in [7, 23]:
 			for y in range(TILE):
@@ -184,34 +165,42 @@ func _paint_tile(img: Image, tile_x: int, top: Color, bottom: Color) -> void:
 						img.set_pixel(x, TILE - y - 1, Color("#dfe8ef").lerp(Color("#87919a"), float(y) / TILE))
 
 func _build_level() -> void:
-	# Clean route: warm-up, gap jumps, hazard climb, key path, enemy lane, boss arena.
-	_add_ground(0, 18, 15)
-	_add_ground(18, 18, 10)
-	_add_ground(32, 18, 11)
-	_add_ground(48, 18, 12)
-	_add_ground(65, 18, 13)
-	_add_ground(84, 18, 22)
+	# TileMap version of the reference: layered cliffs, bridge gaps, tunnels, and boss yard.
+	_add_ground(0, 13, 16)
+	_add_ground(0, 18, 14)
+	_add_ground(0, 24, 27)
+	_add_ground(31, 16, 30)
+	_add_ground(36, 10, 13)
+	_add_ground(39, 22, 26)
+	_add_ground(65, 19, 14)
+	_add_ground(76, 16, 34)
+	_add_ground(78, 24, 32)
 
-	_add_platform(6, 15, 4, T_WOOD)
-	_add_platform(16, 14, 4, T_WOOD)
-	_add_platform(26, 13, 4, T_WOOD)
-	_add_platform(37, 15, 5, T_WOOD)
-	_add_platform(46, 12, 4, T_WOOD)
-	_add_platform(55, 10, 4, T_WOOD)
-	_add_platform(65, 13, 5, T_WOOD)
-	_add_platform(75, 11, 4, T_WOOD)
-	_add_platform(86, 14, 5, T_WOOD)
+	_add_platform(17, 15, 4, T_WOOD)
+	_add_platform(23, 18, 5, T_WOOD)
+	_add_platform(29, 13, 4, T_WOOD)
+	_add_platform(54, 20, 5, T_WOOD)
+	_add_platform(66, 15, 6, T_WOOD)
+	_add_platform(84, 21, 5, T_WOOD)
 
-	_add_wall(43, 15, 3, T_FENCE)
-	_add_wall(60, 15, 3, T_FENCE)
-	_add_wall(83, 15, 3, T_FENCE)
+	_add_wall(8, 17, 4, T_FENCE)
+	_add_wall(43, 15, 6, T_FENCE)
+	_add_wall(64, 21, 4, T_FENCE)
+	_add_wall(82, 23, 5, T_FENCE)
+	_add_wall(100, 23, 6, T_FENCE)
 
-	for x in [21, 22, 23, 52, 53, 54, 79, 80, 81]:
-		_add_water_tile(x, 18)
-	for x in [34, 35, 67, 68, 90, 91, 92]:
-		_add_spike_tile(x, 17)
-	for x in [30, 31, 61, 62, 88, 89]:
-		tile_map.set_cell(0, Vector2i(x, 17), 0, T_MUD)
+	for x in [7, 8, 9]:
+		_add_spike_tile(x, 23)
+	for x in [69, 70, 71]:
+		_add_spike_tile(x, 18)
+	for x in [91, 92, 93, 94]:
+		_add_spike_tile(x, 15)
+	for x in [26, 27, 28]:
+		_add_water_tile(x, 24)
+	for x in [61, 62, 63]:
+		_add_water_tile(x, 22)
+	for x in [50, 51, 73, 74, 104, 105]:
+		tile_map.set_cell(0, Vector2i(x, 21), 0, T_MUD)
 
 	_add_tile_collisions()
 
@@ -271,23 +260,23 @@ func _spawn_player() -> void:
 	camera.position_smoothing_enabled = true
 	camera.limit_left = -64
 	camera.limit_top = -420
-	camera.limit_right = 3500
-	camera.limit_bottom = 820
+	camera.limit_right = 3600
+	camera.limit_bottom = 900
 	camera.zoom = Vector2(1.0, 1.0)
 	player.add_child(camera)
 	camera.make_current()
 
 func _spawn_checkpoints() -> void:
-	for pos in [Vector2(760, 520), Vector2(1640, 520), Vector2(2510, 320)]:
+	for pos in [Vector2(720, 710), Vector2(1660, 640), Vector2(2540, 450)]:
 		var checkpoint := Checkpoint.new()
 		checkpoint.position = pos
 		checkpoint.activated.connect(_on_checkpoint_activated)
 		add_child(checkpoint)
 
 func _spawn_moving_platforms() -> void:
-	_add_moving_platform(Vector2(1030, 445), Vector2(170, 0), 2.0)
-	_add_moving_platform(Vector2(1770, 300), Vector2(0, 120), 2.4)
-	_add_moving_platform(Vector2(2640, 405), Vector2(150, -70), 2.2)
+	_add_moving_platform(Vector2(565, 490), Vector2(200, 0), 2.0)
+	_add_moving_platform(Vector2(930, 430), Vector2(0, 135), 2.4)
+	_add_moving_platform(Vector2(2110, 500), Vector2(180, -70), 2.2)
 
 func _add_moving_platform(pos: Vector2, offset: Vector2, travel: float) -> void:
 	var platform := MovingPlatform.new()
@@ -298,16 +287,16 @@ func _add_moving_platform(pos: Vector2, offset: Vector2, travel: float) -> void:
 
 func _spawn_shop() -> void:
 	var shop := CropShop.new()
-	shop.position = Vector2(1840, 520)
+	shop.position = Vector2(1710, 465)
 	shop.heal_requested.connect(_on_shop_heal_requested)
 	add_child(shop)
 
 func _spawn_collectibles() -> void:
-	for pos in [Vector2(250, 430), Vector2(555, 395), Vector2(890, 360), Vector2(1235, 455), Vector2(1510, 300), Vector2(2110, 390), Vector2(2775, 455)]:
+	for pos in [Vector2(250, 350), Vector2(530, 650), Vector2(940, 380), Vector2(1260, 275), Vector2(1730, 430), Vector2(2300, 515), Vector2(2860, 420)]:
 		_add_collectible("crop", pos, 25)
-	for pos in [Vector2(420, 510), Vector2(760, 510), Vector2(1090, 510), Vector2(1710, 245), Vector2(2240, 510), Vector2(2420, 340), Vector2(2920, 510)]:
+	for pos in [Vector2(410, 510), Vector2(790, 680), Vector2(1090, 455), Vector2(1450, 260), Vector2(2040, 580), Vector2(2480, 430), Vector2(3150, 430)]:
 		_add_collectible("coin", pos, 10)
-	_add_collectible("key", Vector2(2425, 305), 0)
+	_add_collectible("key", Vector2(1440, 245), 0)
 
 func _add_collectible(kind: String, pos: Vector2, value: int) -> void:
 	var item := Collectible.new()
@@ -318,13 +307,13 @@ func _add_collectible(kind: String, pos: Vector2, value: int) -> void:
 	add_child(item)
 
 func _spawn_enemies() -> void:
-	_add_enemy("slime", Vector2(470, 520))
-	_add_enemy("worm", Vector2(1180, 520))
-	_add_enemy("crow", Vector2(1500, 285))
-	_add_enemy("mushroom", Vector2(1980, 520))
-	_add_enemy("crow", Vector2(2390, 320))
-	_add_enemy("worm", Vector2(2860, 520))
-	_add_enemy("boss", Vector2(3130, 500))
+	_add_enemy("slime", Vector2(380, 520))
+	_add_enemy("worm", Vector2(1040, 700))
+	_add_enemy("crow", Vector2(1240, 270))
+	_add_enemy("mushroom", Vector2(1810, 650))
+	_add_enemy("crow", Vector2(2230, 500))
+	_add_enemy("worm", Vector2(2760, 450))
+	_add_enemy("boss", Vector2(3060, 420))
 
 func _add_enemy(kind: String, pos: Vector2) -> void:
 	var enemy := FarmEnemy.new()
@@ -335,7 +324,7 @@ func _add_enemy(kind: String, pos: Vector2) -> void:
 
 func _spawn_gate() -> void:
 	gate = Gate.new()
-	gate.position = Vector2(3350, 510)
+	gate.position = Vector2(3370, 420)
 	gate.reached_gate.connect(_on_gate_reached)
 	add_child(gate)
 

@@ -19,7 +19,8 @@ A beginner-friendly Godot 4.x 2D combat platformer where a farmer protects the h
 - Moving wooden platforms
 - Crop shop stall that trades coins for healing
 - Level timer shown in the HUD and on completion
-- Richer farm background with hills, barns, windmills, crop rows, and clouds
+- Supplied illustrated farm panorama used as the repeating level background
+- Multi-tier TileMap layout based on the supplied reference: cliffs, bridges, tunnels, hazards, and boss yard
 - Imported cartoon sprite frames for the farmer, beetle bugs, crows, worms, and Pest King boss
 - Slime/mushroom slots use the beetle bug sprite set, with worm, crow, and boss using their own sheets
 - Collectible crops, coins, and golden crop key
