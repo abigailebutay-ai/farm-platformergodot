@@ -16,7 +16,7 @@ A beginner-friendly Godot 4.x 2D combat platformer where a farmer protects the h
 - Checkpoints that respawn the player after death or falling
 - Player HP label plus a red HP bar
 - Enemy and boss health bars
-- Moving wooden platforms
+- Repeating hunter crows that fly directly toward the player
 - Crop shop stall that trades coins for healing
 - Level timer shown in the HUD and on completion
 - Supplied illustrated farm panorama used as the repeating level background
@@ -55,4 +55,4 @@ Solid tiles, spikes, and water automatically rebuild their gameplay collision wh
 - `scenes/enemies/Crow.tscn` - crow enemy
 - `scenes/enemies/MushroomBeetle.tscn` - stronger beetle enemy
 - `scenes/enemies/PestKing.tscn` - boss enemy
-- `scenes/objects/` - checkpoint, moving platform, crop shop, and gate scenes
+- `scenes/objects/` - checkpoint, crop shop, and gate scenes

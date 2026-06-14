@@ -21,6 +21,7 @@ var health_bar: ColorRect
 var damage_cooldown := 0.0
 var hurt_time := 0.0
 var dead := false
+var lifetime := 0.0
 
 func _ready() -> void:
 	start_position = global_position
@@ -41,6 +42,10 @@ func configure(kind: String, target: Player) -> void:
 			max_health = 2
 			speed = 85
 			points = 120
+		"hunter_crow":
+			max_health = 1
+			speed = 115
+			points = 80
 		"mushroom":
 			max_health = 3
 			speed = 55
@@ -61,8 +66,9 @@ func _physics_process(delta: float) -> void:
 		return
 	damage_cooldown = max(0.0, damage_cooldown - delta)
 	hurt_time = max(0.0, hurt_time - delta)
+	lifetime += delta
 
-	if enemy_type == "crow":
+	if enemy_type in ["crow", "hunter_crow"]:
 		_fly(delta)
 	else:
 		_walk(delta)
@@ -101,6 +107,16 @@ func _walk(delta: float) -> void:
 		direction *= -1
 
 func _fly(delta: float) -> void:
+	if enemy_type == "hunter_crow":
+		if player:
+			var target_direction := global_position.direction_to(player.global_position)
+			velocity = target_direction * speed
+			direction = sign(target_direction.x) if abs(target_direction.x) > 0.05 else direction
+			move_and_slide()
+			if lifetime > 18.0 and global_position.distance_to(player.global_position) > 700.0:
+				queue_free()
+		return
+
 	var chase := player and global_position.distance_to(player.global_position) < 210
 	if chase:
 		direction = sign(player.global_position.x - global_position.x)
@@ -125,7 +141,7 @@ func _update_animation() -> void:
 	sprite.flip_h = direction > 0
 	if hurt_time > 0:
 		sprite.play("hurt")
-	elif enemy_type == "crow":
+	elif enemy_type in ["crow", "hunter_crow"]:
 		sprite.play("fly")
 	elif enemy_type == "boss":
 		sprite.play("stomp")
@@ -148,6 +164,8 @@ func _build_body() -> void:
 	contact_shape.shape = contact_rect
 	contact_area.add_child(contact_shape)
 	contact_area.body_entered.connect(_on_contact_body_entered)
+	if enemy_type == "hunter_crow":
+		add_to_group("flying_attackers")
 
 	sprite = AnimatedSprite2D.new()
 	sprite.sprite_frames = _make_frames()
@@ -214,7 +232,7 @@ func _make_frames() -> SpriteFrames:
 	match enemy_type:
 		"worm":
 			base = Color("#d8875c")
-		"crow":
+		"crow", "hunter_crow":
 			base = Color("#4e5a71")
 		"mushroom":
 			base = Color("#cc5e5e")
@@ -247,7 +265,7 @@ func _asset_folder() -> String:
 	match enemy_type:
 		"worm":
 			return "worm"
-		"crow":
+		"crow", "hunter_crow":
 			return "crow"
 		"boss":
 			return "boss"

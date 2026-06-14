@@ -17,9 +17,11 @@ const CROW_SCENE := preload("res://scenes/enemies/Crow.tscn")
 const MUSHROOM_SCENE := preload("res://scenes/enemies/MushroomBeetle.tscn")
 const BOSS_SCENE := preload("res://scenes/enemies/PestKing.tscn")
 const CHECKPOINT_SCENE := preload("res://scenes/objects/Checkpoint.tscn")
-const MOVING_PLATFORM_SCENE := preload("res://scenes/objects/MovingPlatform.tscn")
 const SHOP_SCENE := preload("res://scenes/objects/CropShop.tscn")
 const GATE_SCENE := preload("res://scenes/objects/Gate.tscn")
+
+const FLYING_ENEMY_INTERVAL := 4.0
+const MAX_FLYING_ENEMIES := 6
 
 var player: Player
 var tile_map: Node
@@ -39,12 +41,13 @@ var spawn_point := Vector2(96, 350)
 var checkpoint_position := Vector2(96, 350)
 var elapsed_time := 0.0
 var game_finished := false
+var flying_enemy_timer := 2.0
+var flying_spawn_side := 1.0
 
 func _ready() -> void:
 	_ensure_input_actions()
 	_spawn_player()
 	_spawn_checkpoints()
-	_spawn_moving_platforms()
 	_spawn_shop()
 	_spawn_collectibles()
 	_spawn_enemies()
@@ -89,6 +92,7 @@ func _process(delta: float) -> void:
 		player.fall_out()
 	if not game_finished:
 		elapsed_time += delta
+		_update_flying_enemy_spawns(delta)
 	_update_timer_ui()
 
 func _build_background() -> void:
@@ -284,18 +288,6 @@ func _spawn_checkpoints() -> void:
 		checkpoint.activated.connect(_on_checkpoint_activated)
 		add_child(checkpoint)
 
-func _spawn_moving_platforms() -> void:
-	_add_moving_platform(Vector2(565, 490), Vector2(200, 0), 2.0)
-	_add_moving_platform(Vector2(930, 430), Vector2(0, 135), 2.4)
-	_add_moving_platform(Vector2(2110, 500), Vector2(180, -70), 2.2)
-
-func _add_moving_platform(pos: Vector2, offset: Vector2, travel: float) -> void:
-	var platform: MovingPlatform = MOVING_PLATFORM_SCENE.instantiate()
-	platform.position = pos
-	platform.move_offset = offset
-	platform.travel_time = travel
-	add_child(platform)
-
 func _spawn_shop() -> void:
 	var shop: CropShop = SHOP_SCENE.instantiate()
 	shop.position = Vector2(1710, 465)
@@ -326,12 +318,31 @@ func _spawn_enemies() -> void:
 	_add_enemy("worm", Vector2(2760, 450))
 	_add_enemy("boss", Vector2(3060, 420))
 
+func _update_flying_enemy_spawns(delta: float) -> void:
+	if not player or player.dead:
+		return
+	flying_enemy_timer -= delta
+	if flying_enemy_timer > 0.0:
+		return
+	flying_enemy_timer = FLYING_ENEMY_INTERVAL
+	if get_tree().get_nodes_in_group("flying_attackers").size() >= MAX_FLYING_ENEMIES:
+		return
+
+	var spawn_offset := Vector2(520.0 * flying_spawn_side, randf_range(-220.0, -80.0))
+	flying_spawn_side *= -1.0
+	var spawn_position := player.global_position + spawn_offset
+	spawn_position.x = clamp(spawn_position.x, 40.0, 3520.0)
+	spawn_position.y = clamp(spawn_position.y, 80.0, 720.0)
+	_add_enemy("hunter_crow", spawn_position)
+
 func _add_enemy(kind: String, pos: Vector2) -> void:
 	var packed_scene: PackedScene = BEETLE_SCENE
 	match kind:
 		"worm":
 			packed_scene = WORM_SCENE
 		"crow":
+			packed_scene = CROW_SCENE
+		"hunter_crow":
 			packed_scene = CROW_SCENE
 		"mushroom":
 			packed_scene = MUSHROOM_SCENE
